@@ -7,7 +7,7 @@
 .data
 READ_MODE: .asciz "r"
 HOPE: .asciz "TENGO LA ESPERANZA DE QUE AQUI SALGA LO QUE ESPERO %s\n"
-INSTRUCCION_: .asciz "%x\n"
+INSTRUCCION_: .asciz "0x%08x\n"
 args_error_msg: .asciz "No se ingresaron el numero correcto de parametros"
 dot_data: .space 1000 	//el area de data
 dot_text: .space 4000	//el area de texto
@@ -52,6 +52,7 @@ display_instructions:
 display_loop:
    LDR x0,=INSTRUCCION_
    LDR w1,[x19,#0]
+   ADD x19,x19,#4
    CMP w1,#0
    B.EQ finish_display
    BL printf
@@ -60,7 +61,15 @@ finish_display:
    LDR x19,[SP,#8]
    LDR x30,[SP,#0]
    ADD SP, SP, #16
+   RET
 
+//////////////////////////////////////////////////////////////////////////////
+///////////////////////////////encode/////////////////////////////////////////
+/////////////////////x0: buffer con las instrucciones/////////////////////////
+/////////////////////////////x1: area de texto////////////////////////////////
+/////////////////////////////x2: area de data ////////////////////////////////
+///////////////////ESTA ES LA FUNCION QUE DEBEN IMPLEMENTAR///////////////////
+//////////////////////////////////////////////////////////////////////////////
 encode:
    RET
 
@@ -86,7 +95,7 @@ main:
    MOV x1, x20
    MOV x2, x21
    BL encode		//esta es la ultima instruccion que hay que codificar
-   MOV x0, x20    //desplegaremos las instrucciones codificadas
+   MOV x0, x20    	//desplegaremos las instrucciones codificadas
    BL display_instructions
 main_finish:
    MOV x0,#0 		// return 0 :)
