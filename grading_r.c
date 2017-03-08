@@ -74,6 +74,7 @@ int main(){
          puts(" (+0.00)");
       }
    }
+   printf(".............................\nTotal: %.2f/100.0",total);
    free(line);
    free(buffer);
    return 0;
