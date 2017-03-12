@@ -5,14 +5,29 @@
 ////////////////////////////////////////////////////////////////////////////////////
 
 .data
+ADD_: .asciz "ADD"
+FSUBS: .asciz "SUBS"
+FORR: .asciz "ORR"
+FADDS: .asciz "ADDS"
+FSUB: .asciz "SUB"
+FAND: .asciz "AND"
+FEOR: .asciz "EOR"
+FANDS: .asciz "ANDS"
+FLSLV: .asciz "LSLV"
+FLSRV: .asciz  "LSRV"
+FASRV: .asciz "ASRV"
+FORV: .asciz "RORV"
+FXZR: .asciz "xzr"
 READ_MODE: .asciz "r"
+WORD: .space 100
+CHAR: .asciz "%c\n"
 HOPE: .asciz "TENGO LA ESPERANZA DE QUE AQUI SALGA LO QUE ESPERO %s\n"
 TO_CODE_MESSAGE: .asciz "Instrucciones a Codificar:\n..........................\n%s"
-CODED_MESSAGE:	.asciz "\nInstrucciones Codificadas:\n.........................."
+CODED_MESSAGE: .asciz "\nInstrucciones Codificadas:\n.........................."
 INSTRUCCION_: .asciz "0x%08x\n"
 args_error_msg: .asciz "No se Ingreso el Numero Correcto de Parametros"
-dot_data: .space 1000 	//el area de data
-dot_text: .space 4000	//el area de texto
+dot_data: .space 1000   //el area de data
+dot_text: .space 4000   //el area de texto
 file_buffer: .space 8000//el buffer que guardara el texto a codificar
 .text
   .globl main
@@ -24,14 +39,14 @@ file_buffer: .space 8000//el buffer que guardara el texto a codificar
 //////////////X0: el buffer donde guardaremos los caracteres////////////////
 ////////////////////X1: el archivo que vamos a abrir////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-read_file: 		//x0 es el buffer, x1 es el archivo
+read_file:     //x0 es el buffer, x1 es el archivo
    ADD SP, SP, #-32
    STR x30,[SP,#0]
    STR x19,[SP,#8]
    STR x20,[SP,#16]
    STR x21,[SP,#24]
-   MOV x19, x0		//el buffer
-   MOV x20, x1		//el archivo
+   MOV x19, x0    //el buffer
+   MOV x20, x1    //el archivo
 read_file_loop:
    MOV x0, x20
    BL fgetc
@@ -44,7 +59,7 @@ read_file_loop:
    ADD x19,x19, #1
    B read_file_loop
 read_file_finish:
-   MOV x9,#0		//un \0 diciendo que se acabo el archivo
+   MOV x9,#0      //un \0 diciendo que se acabo el archivo
    STR x9,[x19,#0]
    LDR x21,[SP,#24]
    LDR x20,[SP,#16]
@@ -73,7 +88,7 @@ display_instructions:
 display_loop:
    LDR x0,=INSTRUCCION_
    LDR w1,[x19,#0]
-   ADD x19,x19,#4
+   ADD x19,x19,#4    //DE 4 EN 4 PARA CADA INSTRUCCION
    CMP w1,#0
    B.EQ finish_display
    BL printf
@@ -98,7 +113,275 @@ finish_display:
 /////////////////////////////x2: area de data ////////////////////////////////
 ///////////////////ESTA ES LA FUNCION QUE DEBEN IMPLEMENTAR///////////////////
 //////////////////////////////////////////////////////////////////////////////
+
+
+
+/////x0 = BUFFER DE INSTRUCCIONES
+/////x1 = ESPACIO PARA GUARDAR UNA PALABRA
+get_word:
+   SUB SP, SP, #32
+   STR x30, [SP,#0]
+   STR x19, [SP,#8]
+   STR x20, [SP,#16]
+   MOV x19,x0     //GUARDO EN x19 EL BUFFER DE INSTRUCCIONES
+   MOV x20,x1     //GUARDO EN x20 EL ESPACIO PARA LA PALABRA
+ignore_char:
+   LDRB w9,[x0,#0]
+   CMP w9,' '   //COMPARANDO CON ESPACIO
+   B.EQ ignore_char_loop
+   CMP w9,#9   //COMPARANDO CON TAB
+   B.EQ ignore_char_loop
+   CMP w9,'\n' //COMPARANDO CON \n
+   B.EQ ignore_char_loop
+   CMP w9,','  //COMPARANDO CON COMA
+   B.EQ ignore_char_loop
+   CMP w9,#0   //COMPARANDO CON NULL
+   B.EQ finish_get_word
+   B get_word_loop
+ignore_char_loop:
+   ADD x0, x0, #1
+   B ignore_char
+
+get_word_loop:
+   LDRB w9,[x0,#0]
+   CMP w9,' '
+   B.EQ finish_get_word
+   CMP w9,','
+   B.EQ finish_get_word
+   CMP w9,'\n'
+   B.EQ finish_get_word
+   CMP w9,#0
+   B.EQ finish_get_word
+   STRB w9,[x1,#0]
+   ADD x1, x1, #1
+   ADD x0, x0, #1
+   B get_word_loop
+finish_get_word:
+   MOV w10,#0
+   STRB w10,[x1,#0]
+   LDR x30, [SP,#0]
+   LDR x19, [SP,#8]
+   LDR x20,[SP,#16]
+   ADD SP, SP, #32
+   RET
+
+
+add_case:
+   MOV w0,#0x8B0
+   LSL w0, w0, #20
+   B code_r_instruction
+adds_case:
+   MOV w0,#0xAB0
+   LSL w0, w0, #20
+   B code_r_instruction  
+sub_case:
+   MOV w0,#0xCB0
+   LSL w0, w0, #20
+   B code_r_instruction    
+subs_case:
+   MOV w0,#0xEB0
+   LSL w0, w0, #20
+   B code_r_instruction
+orr_case:
+   MOV w0,#0xAA0
+   LSL w0, w0, #20
+   B code_r_instruction
+and_case: 
+   MOV w0,#0x8A0
+   LSL w0, w0, #20
+   B code_r_instruction
+eor_case:
+   MOV w0,#0xCA0
+   LSL w0, w0, #20
+   B code_r_instruction 
+ands_case:
+   MOV w0,#0xEA0
+   LSL w0, w0, #20
+   B code_r_instruction  
+lslv_case:
+   MOV w0,#0x9AC
+   LSL w0, w0, #20
+   MOV w2, #0x8
+   LSL w2, w2, #10
+   orr w0, w0, w2
+   B code_r_instruction  
+lsrv_case:
+   MOV w0,#0x9AC
+   LSL w0, w0, #20
+   MOV w2, #0x9
+   LSL w2, w2, #10
+   orr w0, w0, w2
+   B code_r_instruction 
+asrv_case:
+   MOV w0,#0x9AC
+   LSL w0, w0, #20
+   MOV w2, #0xA
+   LSL w2, w2, #10
+   orr w0, w0, w2
+   B code_r_instruction
+rorv_case:
+   MOV w0,#0x9AC
+   LSL w0, w0, #20
+   MOV w2, #0xB
+   LSL w2, w2, #10
+   orr w0, w0, w2
+   B code_r_instruction     
 encode:
+   SUB SP, SP, #48
+   STR x19,[SP,#0]
+   STR x20,[SP,#8]
+   STR x21,[SP,#16]
+   STR x22,[SP,#24]
+   STR x30,[SP,#32]
+   STR X25,[SP,#40]
+   MOV x19,x0     //BUFFER
+   MOV x20,x1     //AREA DE TEXTO
+   MOV x21,x2
+loop:
+   MOV x0,x19     //PARAMETRO 1 (BUFFER)
+   LDR x1,=WORD      //PARAMETRO 2 (ESPACIO DONDE GUARADARE LA PALABRA)
+   BL get_word
+   MOV x19,x0     //DESECHANDO LO QUE YA LEI DEL BUFFER
+   LDR x0,=WORD
+   LDR x1,=ADD_
+   BL strcmp
+   CMP x0,#0
+   B.EQ add_case
+   //ORR
+   LDR x0,=WORD
+   LDR x1,=FORR
+   BL strcmp
+   CMP x0,#0
+   B.EQ orr_case 
+   //SUBS
+   LDR x0,=WORD
+   LDR x1,=FSUBS
+   BL strcmp
+   CMP x0,#0
+   B.EQ subs_case
+   //ADDS
+   LDR x0,=WORD
+   LDR x1,=FADDS
+   BL strcmp
+   CMP x0,#0
+   B.EQ adds_case
+   //sub
+   LDR x0,=WORD
+   LDR x1,=FSUB
+   BL strcmp
+   CMP x0,#0
+   B.EQ sub_case
+   //and_case
+   LDR x0,=WORD
+   LDR x1,=FAND
+   BL strcmp
+   CMP x0,#0
+   B.EQ and_case
+   //EOR
+   LDR x0,=WORD
+   LDR x1,=FEOR
+   BL strcmp
+   CMP x0,#0
+   B.EQ eor_case
+   //ands
+   LDR x0,=WORD
+   LDR x1,=FANDS
+   BL strcmp
+   CMP x0,#0
+   B.EQ ands_case
+   //lslv
+   LDR x0,=WORD
+   LDR x1,=FLSLV
+   BL strcmp
+   CMP x0,#0
+   B.EQ lslv_case
+   //lsrv
+   LDR x0,=WORD
+   LDR x1,=FLSRV
+   BL strcmp
+   CMP x0,#0
+   B.EQ lsrv_case
+   //asrv
+   LDR x0,=WORD
+   LDR x1,=FASRV
+   BL strcmp
+   CMP x0,#0
+   B.EQ asrv_case
+   //RORV
+   LDR x0,=WORD
+   LDR x1,=FORV
+   BL strcmp
+   CMP x0,#0
+   B.EQ rorv_case
+
+   B finish_encode
+code_r_instruction:
+   MOV w22,w0
+
+   MOV x0, x19
+   LDR x1,=WORD
+   BL get_word
+   MOV x19,x0
+   LDR x0,=WORD
+   ADD x0,x0, #1
+   BL atoi
+   ORR w22, w22, w0
+
+     MOV x0,x19
+   LDR x1,=WORD
+   BL get_word
+   MOV x19,x0
+   LDR x0,=WORD
+   MOV X25, X0
+   LDR x1,=FXZR
+   BL strcmp
+   CMP x0,#0
+   B.EQ xprimero
+   MOV X0,X25
+   ADD x0,x0,#1
+   BL atoi
+   LSL w0, w0, #5
+   ORR w22, w22, w0
+
+   MOV x0,x19
+   LDR x1,=WORD
+   BL get_word
+   MOV x19,x0
+   LDR x0,=WORD
+   MOV X25, X0
+   LDR x1,=FXZR
+   BL strcmp
+   CMP x0,#0
+   B.EQ xsegundo
+   MOV X0,X25
+   ADD x0,x0,#1
+   BL atoi
+   LSL w0,w0,#16
+   ORR w22, w22, w0
+   b fin
+   xprimero:
+   mov x0, #31
+   LSL w0,w0,#5
+   ORR w22, w22, w0
+   B fin
+   xsegundo:
+   mov x0, #31
+   LSL w0,w0,#16
+   ORR w22, w22, w0
+   B fin
+
+   fin:
+   STR w22, [x20,#0]
+   ADD x20, x20, #4
+   b loop
+finish_encode:
+   LDR x19,[SP,#0x0]
+   LDR x20,[SP,#0x8]
+   LDR x21,[SP,#0x10]
+   LDR x22,[SP,#0x18]
+   LDR x30,[SP,#0x20]
+   LDR X25,[SP,#40]
+   ADD SP, SP,#48
    RET
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////FINISH ENCODE///////////////////////////////////
@@ -114,30 +397,30 @@ main:
    STR x30,[SP,#0]
    CMP x0, #2
    BNE args_error
-   MOV x27, x1		//argv se guarda en x27
-   LDR x19,=file_buffer	//x19 guarda el buffer de caracteres ya leidos
-   LDR x20,=dot_text	//x20 guarda el area de texto
-   LDR x21,=dot_data	//x21 guarda el area de data
+   MOV x27, x1    //argv se guarda en x27
+   LDR x19,=file_buffer //x19 guarda el buffer de caracteres ya leidos
+   LDR x20,=dot_text //x20 guarda el area de texto
+   LDR x21,=dot_data //x21 guarda el area de data
    LDR x0,[x27,#8]
    LDR x1,=READ_MODE
    BL fopen
-   MOV x22, x0		//el archivo del que leeremos esta en x22
+   MOV x22, x0    //el archivo del que leeremos esta en x22
    MOV x0, x19
    MOV x1, x22
-   BL read_file		//leemos el archivo completo
+   BL read_file      //leemos el archivo completo
    MOV x0, x22
    BL fclose
    LDR x0,=TO_CODE_MESSAGE
    MOV x1,x19
-   BL printf		//vamos a imprimir que hay en el buffer
-   MOV x0, x19		//x0 tendra el buffer
-   MOV x1, x20		//x1 tendra el area de texto
-   MOV x2, x21		//x2 tendra el area de data
-   BL encode		//esta es la ultima instruccion que hay que codificar
-   MOV x0, x20    	//desplegaremos las instrucciones codificadas
+   BL printf      //vamos a imprimir que hay en el buffer
+   MOV x0, x19    //x0 tendra el buffer
+   MOV x1, x20    //x1 tendra el area de texto
+   MOV x2, x21    //x2 tendra el area de data
+   BL encode      //esta es la ultima instruccion que hay que codificar
+   MOV x0, x20       //desplegaremos las instrucciones codificadas
    BL display_instructions
 main_finish:
-   MOV x0,#0 		// return 0 :)
+   MOV x0,#0      // return 0 :)
    LDR x30,[SP,#0]
    ADD SP, SP, #16
    RET
@@ -145,4 +428,3 @@ args_error:
    LDR x0,=args_error_msg
    BL puts
    B main_finish
-
